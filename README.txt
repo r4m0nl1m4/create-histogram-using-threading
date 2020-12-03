@@ -26,7 +26,7 @@
 /////////////////////////////////////////////////////////////////////////////
 //                                                                         //
 // Description: Program  to  create  histogram   using   POSIX   threading //
-// Programming,  developed  for  use on serie and parallel processors with //
+// programming,  developed  for  use on serie and parallel processors with //
 // local interconnections.                                                 //
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
