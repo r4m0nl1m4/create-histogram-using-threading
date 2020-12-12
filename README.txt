@@ -10,7 +10,7 @@
 // Names: histogram.h                                                      //
 //        report.h                                                         //
 //        report.pdf                                                       //
-//        creates-a-histogram-with-a-normal-distribution.c                 //
+//        creates-a-histogram-with-a-normal-distribution.cpp               //
 //        shellscript_start.sh                                             //
 //        README.txt                                                       //
 // Date: 02/12/2020                                                        //
