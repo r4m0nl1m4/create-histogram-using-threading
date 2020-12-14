@@ -2,6 +2,10 @@
 
 # To run on terminal: ./shellscript_start.sh
 
-g++ -std=c++11 creates-a-histogram-with-a-normal-distribution.cpp -o creates-a-histogram-with-a-normal-distribution -lpthread
+rm creates-a-histogram-with-a-normal-distribution1
 
-./creates-a-histogram-with-a-normal-distribution 10000000
+g++ -std=c++11 creates-a-histogram-with-a-normal-distribution1.cpp -o creates-a-histogram-with-a-normal-distribution1 -lpthread
+
+./creates-a-histogram-with-a-normal-distribution1 40
+
+#10000000

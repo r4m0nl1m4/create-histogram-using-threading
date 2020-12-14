@@ -1,0 +1,159 @@
+
+//Main for "creates-a-histogram-with-a-normal-distribution" C++ application
+//Created by r4m0nl1m4 02/12/2020
+
+#include "histogram.h"
+#include <pthread.h>
+#include <random>
+#include "report.h"
+#include <vector>
+
+//int a[100], size, N;
+int N, size;
+int a[20];
+int min, max;
+int nGroups;
+float grsize;
+int histo[50];
+int start=0;
+pthread_mutex_t lock;
+pthread_cond_t cond;
+
+void getGaussianDistribuitionArray(){
+    // random device class instance, source of 'true' randomness for initializing random seed
+    std::random_device rd;
+    // Mersenne twister PRNG, initialized with seed from previous random device instance
+    std::mt19937 gen(rd());
+    // Get sample
+    float sample;
+    for(int i=0; i<20; ++i)
+    {
+        // instance of class std::normal_distribution with specific mean and stddev
+        std::normal_distribution<float> d(5,2); 
+        // get random number with normal distribution using gen as random source
+        sample = d(gen);
+        // Add in array
+        a[i] = (int) sample;
+    }
+}
+
+void * work(void *)
+{
+    int i, temp;
+
+    pthread_mutex_lock(&lock);
+    if(start==0)
+        pthread_cond_wait(&cond, &lock);    
+    pthread_mutex_unlock(&lock);
+
+    for(;;){
+        pthread_mutex_lock(&lock);
+        i=size-1;
+        size--;
+        pthread_mutex_unlock(&lock);
+        if(size<0)
+        {
+            pthread_mutex_lock(&lock);
+            pthread_cond_wait(&cond, &lock);
+            pthread_mutex_unlock(&lock);
+        }
+        if(i<0)
+            break;
+        if(min>a[i])
+            min=a[i];
+        if(max<a[i])
+            max=a[i];                   
+    }
+
+    for(;;){
+        pthread_mutex_lock(&lock);
+        i=size-1;
+        size--;
+        pthread_mutex_unlock(&lock);
+        if(i<0)
+            break;
+        temp=(float)((a[i]-min))/grsize;
+        if(temp >(nGroups-1))
+            temp= nGroups-1;
+        histo[temp]++;
+    }
+    return NULL;
+}
+
+int main()
+{
+    pthread_t id;
+    void * status;            
+    int nThread;
+    int temp1, temp2;
+
+    pthread_mutex_init(&lock,0);
+    pthread_cond_init(&cond,0);
+
+    //size of the array
+    size=20;
+    N=size;
+
+    getGaussianDistribuitionArray();
+    printArray(a);
+
+    min=max=a[0];
+
+    //total number of groups required in histogram
+    nGroups=5;
+
+    for(int i=0; i<nGroups; i++)
+        histo[i]=0;
+
+    nThread = nGroups;                 
+    for(int i=0; i<nThread; i++)
+    {
+        if(0==pthread_create(&id,0,work,0))
+            continue;
+        else
+            printf("\nError in creating threads");
+    }
+
+    pthread_mutex_lock(&lock);
+    start=1;
+    if(0!=pthread_cond_broadcast(&cond))
+        printf("\nError in broadcasting");
+    pthread_mutex_unlock(&lock);
+
+    while(size>=0)
+        sleep(1);
+
+    grsize=(float)(max-min)/(float)nGroups;
+    size=N;
+
+    pthread_mutex_lock(&lock);
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&lock);
+                                       
+    while(size>=0)
+        sleep(1);
+
+    pthread_join(id,&status);
+
+    printf("\nThe histogram is as follows::\n");
+    temp1=min;
+    temp2=ceil(grsize);
+
+    for(int i=0; i<nGroups; i++)
+    {
+        if(i!=nGroups-1)
+        {
+            printf("For %d -> %d = %d\n",temp1, temp2,histo[i]);
+            temp1=temp2+1;
+            temp2+=ceil(grsize);
+        }
+        else
+            printf("For %d and up values = %d ",temp1, histo[i]);
+    }
+
+    pthread_mutex_destroy(&lock);                    
+
+    printf("\n");
+
+    return 0;
+}                    

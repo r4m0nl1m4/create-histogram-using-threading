@@ -7,44 +7,29 @@
 #define HISTOGRAM_H
 
 //library(ies)
+#include <iostream>
+#include <cstdio>
 #include <stdio.h>
 #include <math.h>
-#include <cstdio>
+#include <random>
+#include <vector>
 
 /*
  * Normal random numbers generator - Marsaglia algorithm.
  */
 
-int* generateGaussRandomArray(int n)
-{
-    int i;
-    int m = n + n % 2;
-    int* values = (int*)calloc(m,sizeof(int));
-    int average, deviation;
- 
-    if ( values )
+std::vector<float> getGaussianDistribuition(int n, int mean){
+    std::vector<float> distribution(n);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    float sample;
+    for(int i=0; i<n; ++i)
     {
-        for ( i = 0; i < m; i += 2 )
-        {
-            double x,y,rsq,f;
-            do {
-                x = 2.0 * rand() / (double)RAND_MAX - 1.0;
-                y = 2.0 * rand() / (double)RAND_MAX - 1.0;
-                rsq = x * x + y * y;
-            }while( rsq >= 1. || rsq == 0. );
-            f = sqrt( -2.0 * log(rsq) / rsq );
-            values[i]   = (int) (x * f);
-            values[i+1] = (int) (y * f);
-        }
+        std::normal_distribution<float> d(mean,2); 
+        sample = d(gen);
+        distribution[i] = sample;
     }
-    return values;
-}
-
-int* getRandomArrayByTerminal(int *argc, const char **argv){
-    int size = *argc-1;
-    int *array  = (int*)calloc( size, sizeof(int) );
-    array = generateGaussRandomArray(size);
-    return array;
+    return distribution;
 }
 
 void printHistogram(int temp1, int temp2, float TotalHistogramGroups, int* histogram){
@@ -69,6 +54,14 @@ int getThreadsNumber(){
     printf("\nEnter the total number of threads: ");
     scanf("%d", &nThread);
     return nThread;
+}
+
+void printVector(std::vector<float> a){ 
+    printf("\nArray: ");   
+    for(int i = 0; i < a.size(); ++i){
+        printf("%.2f ", a[i]);
+    }
+    printf("\n");   
 }
 
 #endif
