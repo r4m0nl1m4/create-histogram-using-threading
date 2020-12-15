@@ -1,24 +1,29 @@
 
-//Main for "creates-a-histogram-with-a-normal-distribution" C application
+//Main for "creates-a-histogramgram-with-a-normal-distribution" C++ application
 //Created by r4m0nl1m4 02/12/2020
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <math.h>
-#include <pthread.h>
 #include "histogram.h"
-#include <unistd.h>
+#include <pthread.h>
+#include "report.h"
 
-int *array, size, N, min, max, histogram[50], start = 0;
-float TotalHistogramGroups, HistogramGroupInterval;
+int N, size, start=0;
+int min, max, nGroups;
+float groupSize;
+std::vector<int> histogram(11, 0);
 
 pthread_mutex_t lock;
 pthread_cond_t cond;
 
-void *work(void *)
+void * work(void * arg)
 {
+    std::vector<int>* data = (std::vector<int>*)arg;
     int i, temp;
+    int distribution[data->size()];
+    int count = 0;
+    for (auto it : *data){
+        distribution[count] = it;
+        count++;
+    }
 
     pthread_mutex_lock(&lock);
     if(start==0)
@@ -30,20 +35,18 @@ void *work(void *)
         i=size-1;
         size--;
         pthread_mutex_unlock(&lock);
-
         if(size<0){
             pthread_mutex_lock(&lock);
             pthread_cond_wait(&cond, &lock);
             pthread_mutex_unlock(&lock);
         }
-
         if(i<0)
             break;
 
-        if(min > array[i])
-            min = array[i];
-        if(max < array[i])
-            max = array[i];                   
+        if(min>distribution[i])
+            min=distribution[i];
+        if(max<distribution[i])
+            max=distribution[i];                   
     }
 
     for(;;){
@@ -53,46 +56,35 @@ void *work(void *)
         pthread_mutex_unlock(&lock);
         if(i<0)
             break;
-        temp = (float)((array[i]-min))/HistogramGroupInterval;
-        if(temp > (TotalHistogramGroups-1))
-            temp = TotalHistogramGroups-1;
-        histogram[temp]++;
+        temp=(int)((distribution[i]-min))/groupSize;
+        if(temp>(nGroups-1))
+            temp=nGroups-1;
+        if ((temp>=0.0)&&(temp<10.0)) ++histogram[temp];
     }
-
     return NULL;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    int problemSize = atoi(argv[1]);
-
     pthread_t id;
-    void *status;            
-    int i, nThread;
+    void * status;            
+    int nThread;
 
     pthread_mutex_init(&lock,0);
     pthread_cond_init(&cond,0);
 
-    array  = (int*)calloc( problemSize, sizeof(int) );
-    array = generateGaussRandomArray(problemSize);
-    //array = getRandomArrayByTerminal(&argc, const_cast<const char**>(argv));
+    N = atoi(argv[1]);
+    nThread = atoi(argv[2]);
+    nGroups = 10;
 
-    size = sizeof(array)/sizeof(array[0]);
-    N = size;
+    std::vector<int> distribution = getGaussianDistribuition(N);
 
-    HistogramGroupInterval = rand() % 1000;
-
-    TotalHistogramGroups = (float) size / (float) HistogramGroupInterval;
-
-    min = max = array[0];
-
-    for(i=0; i < TotalHistogramGroups; i++)
-        histogram[i] = 0;
-
-    nThread = getThreadsNumber();                 
-    for(i=0; i < nThread; i++){
-        bool pthreadCreated = ( pthread_create(&id,0,work,0) == 0 );
-        if(pthreadCreated)
+    size = distribution.size();
+    min=max=distribution[0];
+          
+    for(int i=1; i<=nThread; i++){
+        bool isCreated = (0==pthread_create(&id,0,work,&distribution)); 
+        if(isCreated)
             continue;
         else
             printf("\nError in creating threads");
@@ -100,26 +92,27 @@ int main(int argc, char **argv)
 
     pthread_mutex_lock(&lock);
     start=1;
-    if(pthread_cond_broadcast(&cond) !=0 )
+    bool isBlocked = (0!=pthread_cond_broadcast(&cond));
+    if(isBlocked)
         printf("\nError in broadcasting");
     pthread_mutex_unlock(&lock);
 
-    while(size >= 0)
+    while(size>=0)
         sleep(1);
 
-    HistogramGroupInterval = (float)(max-min) / (float)TotalHistogramGroups;
+    groupSize=(float)(max-min)/(float)nGroups;
     size=N;
 
     pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&cond);
     pthread_mutex_unlock(&lock);
-                                       
-    while(size >= 0)
+
+    while(size>=0)
         sleep(1);
 
     pthread_join(id,&status);
 
-    printHistogram(min, max, TotalHistogramGroups, histogram);
+    printHistogram(distribution, histogram);
 
     pthread_mutex_destroy(&lock);                    
 
